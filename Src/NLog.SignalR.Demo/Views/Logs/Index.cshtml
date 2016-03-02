@@ -1,0 +1,297 @@
+﻿@{
+}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Logs</title>
+
+    <script src="~/Scripts/jquery-1.10.2.js"></script>
+    <link rel="stylesheet" href="https://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css">
+    <script src="https://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>
+
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/ng-grid/2.0.11/ng-grid.css" />
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.0.2/angular.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/ng-grid/2.0.11/ng-grid.debug.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.11.1/moment.js"></script>
+
+    <style>
+        .infoColor {
+            background-color: #AFB91F;
+            color: white;
+        }
+
+        .warnColor {
+            background-color: #FD6969;
+            color: white;
+        }
+
+        .errorColor {
+            background-color: #E25D5D;
+            color: white;
+        }
+
+        .columnVisible {
+            color: lightgreen;
+        }
+
+        .columnHidden {
+            color: indianred;
+        }
+
+        .json-key {
+            color: brown;
+        }
+
+        .json-value {
+            color: navy;
+        }
+
+        .json-string {
+            color: olive;
+        }
+    </style>
+
+    <script>
+
+        var app = angular.module('myApp', ['ngGrid']);
+        app.config(['$routeProvider', function ($routeProvider) { }])
+         .run(function ($rootScope, $location) {
+             $rootScope.$on("$locationChangeSuccess", function (event, newUrl, current) {
+                 if (!newUrl.endsWith("#popup")) {
+                     $("#infoPopup").hide();
+                 }
+                 else {
+                     $("#infoPopup").show();
+                 }
+             });
+         })
+        app.controller('MyCtrl', ['$scope', '$location', '$window', function ($scope, $location, $window) {
+            $scope.columns = [
+                {
+                    field: 'TimeStamp', displayName: 'Date', width: 185,
+                    cellTemplate: '<div class="ngCellText" ng-class="">{{ formatDateTime(row.getProperty(col.field)) }}</div>'
+                },
+                { field: 'HostName', displayName: 'HostName', cellClass: 'HostName', visible: false, width: 205 },
+                { field: 'MessageObject.MashineName', displayName: 'MashineName', cellClass: 'MashineName', visible: false, width: 175 },
+                { field: 'IdentityName', displayName: 'IdentityName', visible: false, width: 175 },
+                { field: 'RemoteAddr', displayName: 'RemoteAddr', visible: false, width: 175 },
+                { field: 'PathInfo', displayName: 'PathInfo', visible: false, width: 175 },
+                { field: 'MessageObject.ThreadId', displayName: 'ThreadId', visible: false, width: 75 },
+                {
+                    field: 'Level', displayName: 'Level', width: 75,
+                    cellTemplate: '<div class="ngCellText" ng-class="{\'infoColor\' : row.getProperty(\'Level\') == \'Info\',\'warnColor\' : row.getProperty(\'Level\') == \'Warn\', \'errorColor\' : row.getProperty(\'Level\') == \'Error\'}" >{{ row.getProperty(col.field) }}</div>'
+                },
+                { field: 'LoggerName', displayName: 'LoggerName', cellClass: 'LoggerName', visible: false, minWidth: 500, maxWidth: 1000 },
+                { field: 'Message', displayName: 'Message', cellClass: 'Message', minWidth: 500, maxWidth: 1000 }
+            ];
+            $scope.myData = [];
+            $scope.toggleCol = function (i) {
+                $scope.gridOptions.$gridScope.columns[i].toggleVisible();
+            }
+            $scope.generateMessage = function () {
+                $.post("/logs/generateMessage", {}, function (res) { })
+            }
+            $scope.generateError = function () {
+                $.post("/logs/generateError", {}, function (res) { })
+            }
+            $scope.formatDateTime = function (value) {
+                if (value) {
+                    return moment(value).format('YYYY-MM-DD HH:mm:ss');
+                }
+                return "";
+            }
+            $scope.gridOptions = {
+                data: 'myData',
+                columnDefs: $scope.columns,
+                sortInfo: { fields: ['TimeStamp'], directions: ['desc'] },
+                enableColumnResize: true,
+                enableColumnReordering: true,
+                //enableHighlighting: true,
+                showFilter: true,
+                showColumnMenu: true,
+                afterSelectionChange: function (rowItem, event) {
+                    console.log(rowItem.entity);
+                    //$scope.showInfoPopup(JSON.stringify(rowItem.entity, null, 4));
+                    $scope.showInfoPopup(rowItem.entity);
+                }
+            };
+
+            $scope.changeData = function (logEvent, message) {
+                var messageObject = JSON.parse(message);
+                $scope.myData.push({
+                    TimeStamp: logEvent.TimeStamp,
+                    Level: logEvent.Level.Name,
+                    Event: logEvent,
+                    MessageObject: messageObject,
+                    //default not search in nested fields
+                    HostName: messageObject.HostName,
+                    IdentityName: messageObject.IdentityName,
+                    LoggerName: messageObject.LoggerName,
+                    Message: messageObject.Message,
+                    RemoteAddr: messageObject.RemoteAddr,
+                    PathInfo: messageObject.PathInfo
+                });
+            };
+
+            $scope.showInfoPopup = function (text) {
+                $("#infoPopupMessage").html(jsonprint.json.prettyPrint(text));
+                $location.hash("popup")
+            }
+
+            $scope.hideInfoPopup = function (d) {
+                $window.history.back();
+            }
+        }]);
+    </script>
+
+    <script src="~/Scripts/jquery.signalR-2.2.0.js"></script>
+    <script src="~/signalr/hubs"></script>
+
+    <style>
+        .gridStyle {
+            border: 1px solid rgb(212, 212, 212);
+            height: 600px;
+        }
+    </style>
+
+    <script>
+        if (!jsonprint)
+            var jsonprint = {};
+
+        jsonprint.json = {
+            replacer: function (match, pIndent, pKey, pVal, pEnd) {
+                var key = '<span class=json-key>';
+                var val = '<span class=json-value>';
+                var str = '<span class=json-string>';
+                var r = pIndent || '';
+                if (pKey)
+                    r = r + key + pKey.replace(/[": ]/g, '') + '</span>: ';
+                if (pVal)
+                    r = r + (pVal[0] == '"' ? str : val) + pVal + '</span>';
+                return r + (pEnd || '');
+            },
+            prettyPrint: function (obj) {
+                var jsonLine = /^( *)("[\w]+": )?("[^"]*"|[\w.+-]*)?([,[{])?$/mg;
+                return JSON.stringify(obj, null, 3)
+                   .replace(/&/g, '&amp;').replace(/\\"/g, '&quot;')
+                   .replace(/</g, '&lt;').replace( />/g, '&gt;')
+                   .replace(jsonLine, jsonprint.json.replacer);
+            }
+        };
+    </script>
+    <script>
+        var getUrlParameter = function getUrlParameter(sParam) {
+            var sPageURL = decodeURIComponent(window.location.search.substring(1)),
+                sURLVariables = sPageURL.split('&'),
+                sParameterName,
+                i;
+
+            for (i = 0; i < sURLVariables.length; i++) {
+                sParameterName = sURLVariables[i].split('=');
+
+                if (sParameterName[0] === sParam) {
+                    return sParameterName[1] === undefined ? true : sParameterName[1];
+                }
+            }
+        };
+
+        var startConnection = function startConnection() {
+            var typeArray = ["error", "warn", "info", "debug"];
+            var levelsStr = getUrlParameter("levels");
+            if (levelsStr != null) {
+                var levels = levelsStr.split(",");
+                if (levels && levels.length && levels.length > 0) {
+                    typeArray = levels;
+                }
+            }
+
+            document.title = "NLog.SignalR groups: " + typeArray.length + ": " + typeArray.join();
+
+            $.connection.hub.start().done(function () {
+                console.log('Now connected, connection ID=' + $.connection.hub.id);
+
+                var key = "demoGroup123";
+                for (var index in typeArray) {
+                    $.connection.loggingHub.server.subscribe(key, typeArray[index]);
+                }
+            }).fail(function () { console.log('Could not Connect!'); });
+        }
+
+        $(function () {
+
+            $.ajaxSetup({ cache: false }); // prevent IE from caching ajax requests
+
+            var nlog = $.connection.loggingHub;
+
+            nlog.client.log = function (logEvent, message) {
+                var scope = angular.element($("#scope")).scope();
+                scope.changeData(logEvent, message);
+                scope.$apply();
+            };
+
+            $.connection.hub.stateChanged(function (change) {
+                if (change.newState === $.signalR.connectionState.disconnected) {
+                    console.log("liveFeed is disconnected!");
+                    $("#connectedLine").hide();
+                    $("#disconnectedLine").show();
+                }
+                else if (change.newState === $.signalR.connectionState.connected) {
+                    console.log("liveFeed is connected!");
+                    $("#connectedLine").show();
+                    $("#disconnectedLine").hide();
+                }
+            });
+
+            $.connection.hub.disconnected(function () {
+                setTimeout(function () {
+                    startConnection();
+                }, 5000); // Restart connection after 5 seconds.
+            });
+
+            nlog.logging = true;
+            startConnection();
+        })
+    </script>
+</head>
+<body>
+    <div class="container">
+        <div ng-app="myApp">
+            <div id="scope" ng-controller="MyCtrl">
+                <div id="infoPopup"
+                     style="background-color: white;  word-wrap: break-word;
+                     z-index: 100; width: 98%; left: 1%;position: absolute;
+                     display:none;
+                     border: 3px solid #3E4A6B;">
+                    <a ng-click="hideInfoPopup(this)" class="ui-btn ui-corner-all ui-shadow ui-btn ui-icon-delete ui-btn-icon-notext ui-btn-right">Close</a>
+                    @*<div style="background-color: red; height:80px; width:80px; float:right; margin-top:20px; margin-right: 20px;"
+                             ng-click="hideInfoPopup(this)">
+                            X
+                        </div>*@
+                    <pre id="infoPopupMessage">
+                    </pre>
+                </div>
+                <span>
+                    <span id="connectedLine" style="display:none; color:green;font-size:15px">Connected</span>
+                    <span id="disconnectedLine" style="display:none; color:red;font-size:15px">Disconnected</span>
+                    <span>Columns (show/hide): </span>
+                    <span id="columnCheckboxes"
+                          style="cursor: pointer"
+                          ng-class="{columnVisible: column.visible, columnHidden: !column.visible}"
+                          ng-click="toggleCol($index)"
+                          ng-repeat="column in gridOptions.$gridScope.columns">
+                        {{column.displayName}}
+                    </span>
+                    <span>
+                        <button ng-click="generateMessage()" style="width:400px">Generate message</button>
+                        <button ng-click="generateError()" style="width:400px">Generate Error</button>
+                    </span>
+                </span>
+                <div class="gridStyle" ng-grid="gridOptions"></div>
+            </div>
+        </div>
+    </div>
+    @*@RenderSection("scripts", required: false)*@
+</body>
+</html>

@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+    <metadata>
+        <id>NLog.SignalRGroups</id>
+        <version>1.0.0</version>
+        <title>NLog.SignalR for groups</title>
+        <authors>Nikita Debelov</authors>
+        <licenseUrl>https://github.com/narfunikita/NLog.SignalRGroups/blob/master/LICENSE.md</licenseUrl>
+        <projectUrl>https://github.com/narfunikita/NLog.SignalRGroups</projectUrl>
+        <requireLicenseAcceptance>false</requireLicenseAcceptance>
+        <description>NLog target for sending logs to SignalR groups</description>
+        <copyright />
+        <tags>nlog signalr</tags>
+        <dependencies>
+            <dependency id="NLog" version="4.0.0" />
+            <dependency id="Microsoft.AspNet.SignalR.Core" version="2.2.0" />
+        </dependencies>
+    </metadata>
+    <files>
+        <file src="..\Src\NLog.SignalR\bin\Release\NLog.SignalR.dll" target="lib\NLog.SignalR.dll" />
+    </files>
+</package>
